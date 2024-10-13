@@ -1,149 +1,67 @@
-import numpy as np
 from expr import *
-from expr import BinaryExpression, ConstantExpression, Expression, UnaryExpression
+from expr import BinaryExpression, Expression, UnaryExpression
+
+def is_constant(x: Expression, v) -> bool:
+    return isinstance(x, ConstantExpression) and x.value == v
 
 
-class Visitor(object):
-    def visit(self, expr: Expression):
-        if isinstance(expr, ConstantExpression):
-            return self.visit_constant_expr(expr)
-        elif isinstance(expr, VariableExpression):
-            return self.visit_variable_expr(expr)
-        elif isinstance(expr, UnaryExpression):
-            return self.visit_unary_expr(expr)
-        elif isinstance(expr, BinaryExpression):
-            return self.visit_binary_expr(expr)
+def is_same_symbol(x: Expression, y: Expression) -> bool:
+    if isinstance(x, VariableExpression) and isinstance(y, VariableExpression):
+        return x.name == y.name
+    else:
+        return False
 
+class SimplifierVisitor(Visitor):
     def visit_expr(self, expr: Expression):
-        pass
-
-    def visit_constant_expr(self, expr: ConstantExpression):
-        return self.visit_expr(expr)
-
-    def visit_variable_expr(self, expr: VariableExpression):
-        return self.visit_expr(expr)
-
+        return expr
+    
     def visit_unary_expr(self, expr: UnaryExpression):
-        self.visit(expr.expr)
-        return self.visit_expr(expr)
+        x = self.visit(expr.expr)
+
+        # Constant folding
+        if isinstance(x, ConstantExpression):
+            return ConstantExpression(expr.op.evaluate(x.value))
+
+        return UnaryExpression(expr.op, x)
 
     def visit_binary_expr(self, expr: BinaryExpression):
-        self.visit(expr.lhs)
-        self.visit(expr.rhs)
-        return self.visit_expr(expr)
+        lhs = self.visit(expr.lhs)
+        rhs = self.visit(expr.rhs)
 
+        # Constant folding
+        if isinstance(lhs, ConstantExpression) and isinstance(rhs, ConstantExpression):
+            return ConstantExpression(expr.op.evaluate(lhs.value, rhs.value))
 
-class SequentialMutator(Visitor):
-    def __init__(self, mutators) -> None:
-        super().__init__()
-        self.mutators = mutators
+        # Algebraic simplification
+        if expr.op == BinaryOp.SUB:
+            if is_constant(lhs, 0): # 0 - x ==> -x
+                return UnaryExpression(UnaryOp.NEG, rhs)
+            elif is_constant(rhs, 0): # x - 0 ==> x
+                return lhs
+            elif is_same_symbol(lhs, rhs): # x - x ==> 0
+                return ConstantExpression(0)
+        elif expr.op == BinaryOp.ADD:
+            if is_constant(lhs, 0): # 0 + x ==> x
+                return rhs
+            elif is_constant(rhs, 0): # x + 0 ==> x
+                return lhs
+            elif is_same_symbol(lhs, rhs): # x + x ==> 2*x
+                return BinaryExpression(BinaryOp.MUL, ConstantExpression(2), rhs)
+            elif isinstance(lhs, ConstantExpression): # K + x ==> x + K
+                return BinaryExpression(BinaryOp.ADD, rhs, lhs)
+        elif expr.op == BinaryOp.MUL:
+            if is_constant(lhs, 0) or is_constant(rhs, 0): # 0 * x = x * 0 = 0
+                return ConstantExpression(0)
+            elif is_constant(lhs, 1): # 1 * x = x
+                return rhs
+            elif is_constant(rhs, 1): # x * 1 = x
+                return lhs
+            elif is_same_symbol(lhs, rhs):
+                return BinaryExpression(BinaryOp.POW, lhs, ConstantExpression(2))
+            elif isinstance(rhs, ConstantExpression): # x * K = K * x
+                return BinaryExpression(BinaryOp.MUL, rhs, lhs)
+        elif expr.op == BinaryOp.DIV:
+            if is_same_symbol(lhs, rhs): # x / x = 1
+                return ConstantExpression(1)
 
-    def visit_expr(self, expr: Expression):
-        for mutator in self.mutators:
-            mutator.visit(expr)
-
-
-class RandomRepeatMutator(Visitor):
-    def __init__(self, mutator, max_n: int = 1) -> None:
-        super().__init__()
-        self.mutator = mutator
-        self.max_n = max_n
-
-    def visit_expr(self, expr: Expression) -> None:
-        n = np.random.randint(1, self.max_n + 1)
-        for _ in range(n):
-            self.mutator.visit(expr)
-
-
-class RandomMutator(Visitor):
-    def __init__(self, mutators, p = None) -> None:
-        super().__init__()
-        self.mutators = mutators
-        self.p = p
-
-    def visit_expr(self, expr: Expression):
-        selected_mutator = np.random.choice(self.mutators, p=self.p)
-        selected_mutator.visit(expr)
-
-class RandomConstantMutator(Visitor):
-    def __init__(self, std: float = 1.0) -> None:
-        super().__init__()
-        self.std = std
-
-    def visit_constant_expr(self, expr: ConstantExpression):
-        expr.value = expr.value + np.random.normal(0, self.std, np.shape(expr.value))
-
-
-class RandomBinaryOperatorMutator(Visitor):
-    def __init__(self, operators = [e for e in BinaryOp]) -> None:
-        super().__init__()
-        self.operators = operators
-
-    def visit_binary_expr(self, expr: BinaryExpression):
-        new_operator = np.random.choice(self.operators)
-        expr.op = new_operator
-        self.visit(expr.lhs)
-        self.visit(expr.rhs)
-
-
-class RandomUnaryOperatorMutator(Visitor):
-    def __init__(self, operators = [e for e in UnaryOp]) -> None:
-        super().__init__()
-        self.operators = operators
-
-    def visit_unary_expr(self, expr: UnaryExpression):
-        new_operator = np.random.choice(self.operators)
-        expr.op = new_operator
-        self.visit(expr.expr)
-
-
-class RandomUnaryDeleterMutator(Visitor):
-    def __init__(self, p: float = 0.05) -> None:
-        super().__init__()
-        self.p = p
-
-    def _maybe_remove(self, expr: UnaryExpression) -> Expression:
-        if np.random.random() < self.p:
-            return expr.expr
-        else:
-            return expr
-
-    def visit_binary_expr(self, expr: BinaryExpression):
-        if isinstance(expr.lhs, UnaryExpression):
-            expr.lhs = self._maybe_remove(expr.lhs)
-        if isinstance(expr.rhs, UnaryExpression):
-            expr.rhs = self._maybe_remove(expr.rhs)
-        self.visit(expr.lhs)
-        self.visit(expr.rhs)
-
-    def visit_unary_expr(self, expr: UnaryExpression):
-        if isinstance(expr.expr, UnaryExpression):
-            expr.expr = self._maybe_remove(expr.expr)
-        self.visit(expr.expr)
-
-class RandomBinaryDeleterMutator(Visitor):
-    def __init__(self, p: float = 0.05) -> None:
-        super().__init__()
-        self.p = p
-
-    def _maybe_remove(self, expr: UnaryExpression) -> Expression:
-        if np.random.random() < self.p:
-            if np.random.choice([False, True]):
-                return expr.lhs
-            else:
-                return expr.rhs
-        else:
-            return expr
-
-    def visit_binary_expr(self, expr: BinaryExpression):
-        if isinstance(expr.lhs, BinaryExpression):
-            expr.lhs = self._maybe_remove(expr.lhs)
-        if isinstance(expr.rhs, BinaryExpression):
-            expr.rhs = self._maybe_remove(expr.rhs)
-        self.visit(expr.lhs)
-        self.visit(expr.rhs)
-
-    def visit_unary_expr(self, expr: UnaryExpression):
-        if isinstance(expr.expr, BinaryExpression):
-            expr.expr = self._maybe_remove(expr.expr)
-        self.visit(expr.expr)
+        return BinaryExpression(expr.op, lhs, rhs)

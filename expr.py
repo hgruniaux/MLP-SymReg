@@ -180,3 +180,64 @@ class BinaryExpression(Expression):
             return f"({output})"
         else:
             return output
+
+class Visitor(object):
+    def visit(self, expr: Expression):
+        if isinstance(expr, ConstantExpression):
+            return self.visit_constant_expr(expr)
+        elif isinstance(expr, VariableExpression):
+            return self.visit_variable_expr(expr)
+        elif isinstance(expr, UnaryExpression):
+            return self.visit_unary_expr(expr)
+        elif isinstance(expr, BinaryExpression):
+            return self.visit_binary_expr(expr)
+
+    def visit_expr(self, expr: Expression):
+        pass
+
+    def visit_constant_expr(self, expr: ConstantExpression):
+        return self.visit_expr(expr)
+
+    def visit_variable_expr(self, expr: VariableExpression):
+        return self.visit_expr(expr)
+
+    def visit_unary_expr(self, expr: UnaryExpression):
+        self.visit(expr.expr)
+        return self.visit_expr(expr)
+
+    def visit_binary_expr(self, expr: BinaryExpression):
+        self.visit(expr.lhs)
+        self.visit(expr.rhs)
+        return self.visit_expr(expr)
+
+class DepthVisitor(Visitor):
+    """
+    Computes the maximum depth of an expression tree.
+    """
+
+    def visit_expr(self, expr: Expression):
+        return 0
+
+    def visit_unary_expr(self, expr: UnaryExpression):
+        return 1 + self.visit(expr.expr)
+
+    def visit_binary_expr(self, expr: BinaryExpression):
+        return 1 + max(self.visit(expr.lhs), self.visit(expr.rhs))
+
+class Formula:
+    def __init__(self, expr: Expression) -> None:
+        self.expr = expr
+
+    def __call__(self, *args, **kwds):
+        x = args[0]
+        return self.expr.evaluate({ "x": x })
+
+    def __str__(self) -> str:
+        return self.expr.__str__()
+
+    def simplify(self):
+        return Formula(self.expr.simplify())
+
+    @property
+    def complexity(self) -> float:
+        return DepthVisitor().visit(self.expr)
