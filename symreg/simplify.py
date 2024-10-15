@@ -4,7 +4,16 @@ The mathematical expression simplifier.
 
 from symreg.formula import *
 
-def _simplify_add(expr: UnaryExpression) -> Expression:
+def _is_commutative(op) -> bool:
+  match op:
+    case BinaryOp.ADD | BinaryOp.MUL:
+      return True
+    case BinaryOp.SUB | BinaryOp.DIV:
+      return False
+    case _:
+      raise NotImplementedError
+
+def _simplify_add(expr: BinaryExpression) -> Expression:
   assert(expr.op == BinaryOp.ADD)
 
   if expr.lhs == expr.rhs:
@@ -14,9 +23,6 @@ def _simplify_add(expr: UnaryExpression) -> Expression:
       ConstantExpression(2),
       expr.lhs
     )
-  elif isinstance(expr.lhs, ConstantExpression) and expr.lhs.value == 0:
-    # 0 + x = x
-    return expr.rhs
   elif isinstance(expr.rhs, ConstantExpression) and expr.rhs.value == 0:
     # x + 0 = x
     return expr.lhs
@@ -38,15 +44,9 @@ def _simplify_sub(expr: BinaryExpression) -> Expression:
 def _simplify_mul(expr: BinaryExpression) -> Expression:
   assert(expr.op == BinaryOp.MUL)
 
-  if isinstance(expr.lhs, ConstantExpression) and expr.lhs.value == 0:
-    # 0 * x = 0
-    return ConstantExpression(0)
-  elif isinstance(expr.rhs, ConstantExpression) and expr.rhs.value == 0:
+  if isinstance(expr.rhs, ConstantExpression) and expr.rhs.value == 0:
     # x * 0 = 0
     return ConstantExpression(0)
-  elif isinstance(expr.lhs, ConstantExpression) and expr.lhs.value == 1:
-    # 1 * x = x
-    return expr.rhs
   elif isinstance(expr.rhs, ConstantExpression) and expr.rhs.value == 1:
     # x * 1 = x
     return expr.lhs
@@ -80,6 +80,10 @@ class Simplifier(ExpressionVisitor):
     if self.evaluate and isinstance(expr.lhs, ConstantExpression) and isinstance(expr.rhs, ConstantExpression):
       return ConstantExpression(expr.op.value(expr.lhs.value, expr.rhs.value))
 
+    if isinstance(expr.lhs, ConstantExpression) and _is_commutative(expr.op):
+      # Ensure constants are at right for commutative operators.
+      expr.lhs, expr.rhs = expr.Rhs, expr.lhs
+
     match expr.op:
       case BinaryOp.ADD:
         return _simplify_add(expr)
@@ -98,6 +102,19 @@ class Simplifier(ExpressionVisitor):
     # Constant folding
     if self.evaluate and isinstance(expr.operand, ConstantExpression):
       return ConstantExpression(expr.op.value(expr.operand.value))
+
+    if expr.op == UnaryOp.LOG and isinstance(expr.operand, UnaryExpression) and expr.operand.op == UnaryOp.EXP:
+      # log(exp(x)) = x
+      return expr.operand.operand
+    elif expr.op == UnaryOp.EXP and isinstance(expr.operand, UnaryExpression) and expr.operand.op == UnaryOp.LOG:
+      # exp(log(x)) = x
+      return expr.operand.operand
+    elif expr.op == UnaryOp.SIN and isinstance(expr.operand, UnaryExpression) and expr.operand.op == UnaryOp.ASIN:
+      # sin(arcsin(x)) = x
+      return expr.operand.operand
+    elif expr.op == UnaryOp.TAN and isinstance(expr.operand, UnaryExpression) and expr.operand.op == UnaryOp.ATAN:
+      # tan(arctan(x)) = x
+      return expr.operand.operand
 
     return expr
 

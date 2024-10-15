@@ -101,3 +101,11 @@ def random_expr(options: RandomOptions = RandomOptions()) -> Expression:
 
 def random_formula(options: RandomOptions = RandomOptions()) -> Formula:
   return Formula(random_expr(options))
+
+
+class FormulaGenerator:
+  def __init__(self, options: RandomOptions = RandomOptions()):
+    self.options = options
+
+  def generate(self) -> Formula:
+    return random_formula(self.options)
