@@ -7,8 +7,8 @@ from dataclasses import dataclass
 class RandomOptions:
   prob_constant_expr = 0.2
   prob_variable_expr = 0.8
-  prob_binary_expr = 1
-  prob_unary_expr = 1
+  prob_binary_expr = 0.6
+  prob_unary_expr = 0.4
   allowed_variables = ['x']
   allowed_binary_operators = [o for o in BinaryOp]
   prob_binary_operators = [ 0.1, 0.1, 0.7, 0.1 ]
@@ -76,25 +76,27 @@ def random_expr(options: RandomOptions = RandomOptions()) -> Expression:
   old_err = np.seterr(divide='ignore', invalid='ignore')
 
   while True:
-    expr = _random_expr(npr.randint(1, options.max_depth + 1), options)
-    if options.simplify:
-      expr = simplify(expr)
+    try:
+        expr = _random_expr(npr.randint(1, options.max_depth + 1), options)
+        if options.simplify:
+            expr = simplify(expr)
 
-    if options.must_have_variable and not _has_variable(expr):
-      continue
+        if options.must_have_variable and not _has_variable(expr):
+            continue
 
-    if options.definition_set is None:
-      break
+        if options.definition_set is None:
+            break
 
-    # Check if the expression is valid in the given definition set (no division by zero,
-    # negative values in logs, etc.).
-    y = expr(options.definition_set)
-    if np.shape(y) != np.shape(options.definition_set) or np.any(np.isnan(y)):
-      # We found a NaN! Try to find a new expr.
-      continue
+        # Check if the expression is valid in the given definition set (no division by zero,
+        # negative values in logs, etc.).
+        y = expr(options.definition_set)
+        if np.shape(y) != np.shape(options.definition_set) or np.any(np.isnan(y)):
+            # We found a NaN! Try to find a new expr.
+            continue
 
-
-    break
+        break
+    except:
+        continue
 
   np.seterr(**old_err) # restore old error settings
   return expr

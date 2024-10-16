@@ -4,7 +4,7 @@ from symreg.crossover import *
 from symreg.mutator import *
 from symreg.generator import *
 import random
-
+from copy import deepcopy
 
 @dataclass
 class Options:
@@ -25,8 +25,14 @@ class Options:
     k_best: int = 5
     """The count of best candidates to be considered to generate the new generation."""
 
+    loss_target: float = 0.0
+    """When the loss reach this target, the algorithm stops."""
+
     iterations: int = 10
     """Count of iterations (generations) to simulate."""
+
+    verbose: bool = True
+    """Show the best candidate at every show_every step."""
 
     show_every: int = 1
     """Show information and the best canditate at every requested generation.
@@ -50,49 +56,64 @@ class Options:
 def fitness(formula: Formula, x, y) -> float:
     """Computes the mean squared error (MSE)."""
     predicted_y = formula(x)
+    predicted_y = np.nan_to_num(predicted_y, nan=np.inf)
     return np.mean((y - predicted_y) ** 2)
 
 
 def run(x, y, options: Options):
+    if options.generator is None:
+        raise RuntimeError("A generator object must be provided. See the symreg.generator module.")
+    if options.mutator is None:
+        raise RuntimeError("A mutator object must be provided. See the symreg.mutator module.")
+
     # Generate initial population
     generation = [options.generator.generate() for _ in range(options.population_size)]
 
     crossover_count = int(options.crossover_rate * options.population_size)
     mutation_count = int(options.mutation_rate * options.population_size)
-    random_count = options.population_size - crossover_count - mutation_count
 
-    for i in range(options.iterations):
-        fitness_values = [fitness(f, x, y) for f in generation]
-        best_candidates_indices = np.argpartition(fitness_values, options.k_best)
-        best_candidates: List[Formula] = generation[best_candidates_indices]
+    try:
+        for i in range(options.iterations):
+            # Remove duplicates in the generation
+            generation = list(set(generation))
 
-        generation = []
+            fitness_values = [fitness(f, x, y) for f in generation]
+            best_candidates_indices = np.argpartition(fitness_values, [ 0, options.k_best ])[:options.k_best]
+            best_candidates: List[Formula] = [ generation[i] for i in best_candidates_indices ]
 
-        # Generate formulas by recombining random parts of the previous best candidates (cross-over)
-        for _ in range(crossover_count):
-            formula = options.crossover.crossover(best_candidates)
-            generation.append(formula)
+            if i % options.show_every == 0:
+                print(f"Iteration {i+1}: Loss: {np.min(fitness_values)}")
+                if options.verbose:
+                    print(f"  Best candidate: {best_candidates[0]}")
 
-        # Generate formulas by applying random mutations to the previous best candidates (mutations)
-        for _ in range(mutation_count):
-            formula = random.choice(best_candidates)
-            options.mutator.mutate(formula)
-            generation.append(formula)
+            if np.min(fitness_values) <= options.loss_target:
+                break
 
-        # Generate completely new random formulas
-        for _ in range(random_count):
-            formula = options.generator.generate()
-            generation.append(formula)
+            generation = [  ]
+            generation += best_candidates
 
-        if i % options.show_every == 0:
-            print(f"Iteration {i}:")
-            for j, candidate in enumerate(best_candidates):
-                print(f"    Best candidate {j}:")
-                print(f"        Formula: {candidate}")
-                print(f"        Fitness: {fitness(candidate, x, y)}")
+            # Generate formulas by recombining random parts of the previous best candidates (cross-over)
+            for _ in range(crossover_count):
+                formula = options.crossover.crossover(best_candidates)
+                generation.append(formula)
+
+            # Generate formulas by applying random mutations to the previous best candidates (mutations)
+            for _ in range(mutation_count):
+                formula = deepcopy(random.choice(best_candidates))
+                if options.mutator.mutate(formula):
+                    generation.append(formula)
+
+            # Generate completely new random formulas
+            for _ in range(options.population_size - len(generation)):
+                formula = options.generator.generate()
+                generation.append(formula)
+
+    except KeyboardInterrupt:
+        pass
 
     # Returns the k best candidates
+    generation = list(set(generation)) # remove duplicates
     fitness_values = [fitness(f, x, y) for f in generation]
-    best_candidates_indices = np.argpartition(fitness_values, options.k_best)
-    best_candidates = generation[best_candidates_indices]
+    best_candidates_indices = np.argpartition(fitness_values, [ 0, 1, 2 ])[:3]
+    best_candidates = [ generation[i] for i in best_candidates_indices ]
     return best_candidates

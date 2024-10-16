@@ -33,6 +33,12 @@ class Expression:
     def __eq__(self, value) -> bool:
         raise NotImplementedError
 
+    def __lt__(self, other) -> bool:
+        raise NotImplementedError
+
+    def __hash__(self) -> None:
+        raise NotImplementedError
+
     def __call__(self, *args, **kwds):
         x = args[0]
         return self.evaluate({ "x": x })
@@ -64,6 +70,14 @@ class ConstantExpression(Expression):
             return self.value == value.value
         return False
 
+    def __hash__(self):
+        return hash(self.value)
+
+    def __lt__(self, other) -> bool:
+        if isinstance(other, ConstantExpression):
+            return self.value < other.value
+        return True
+
 
 class VariableExpression(Expression):
     """
@@ -87,6 +101,16 @@ class VariableExpression(Expression):
             return self.name == value.name
         return False
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __lt__(self, other) -> bool:
+        if isinstance(other, ConstantExpression):
+            return False
+        if isinstance(other, VariableExpression):
+            return self.name < other.name
+        return True
+
 
 class BinaryOp(Enum):
     """
@@ -99,6 +123,34 @@ class BinaryOp(Enum):
     SUB = np.subtract
     MUL = np.multiply
     DIV = np.divide
+
+    @property
+    def is_commutative(self) -> bool:
+        """
+        Returns True if the operator is commutative (e.g. x op y = y op x).
+        """
+
+        match self:
+            case BinaryOp.ADD | BinaryOp.MUL: return True
+            case BinaryOp.SUB | BinaryOp.DIV: return False
+            case _: raise NotImplementedError
+
+    def __str__(self):
+        match self:
+            case BinaryOp.ADD: return "+"
+            case BinaryOp.SUB: return "-"
+            case BinaryOp.MUL: return "*"
+            case BinaryOp.DIV: return "/"
+
+    def latex(self):
+        match self:
+            case BinaryOp.ADD: return "+"
+            case BinaryOp.SUB: return "-"
+            case BinaryOp.MUL: return "\\times"
+            case BinaryOp.DIV: return "/"
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 class BinaryExpression(Expression):
@@ -146,6 +198,16 @@ class BinaryExpression(Expression):
             return self.op == value.op and self.lhs == value.lhs and self.rhs == value.rhs
         return False
 
+    def __hash__(self):
+        return hash((self.lhs, self.op, self.rhs))
+
+    def __lt__(self, other) -> bool:
+        if isinstance(other, ConstantExpression) or isinstance(other, VariableExpression) or isinstance(other, UnaryExpression):
+            return False
+        if isinstance(other, BinaryExpression):
+            return self.op < other.op
+        return True
+
 class UnaryOp(Enum):
     """
     The different supported unary operators.
@@ -160,6 +222,29 @@ class UnaryOp(Enum):
     ATAN = np.arctan
     SQRT = np.sqrt
     LOG = np.log
+
+    def __str__(self):
+        match self:
+            case UnaryOp.EXP: return "exp"
+            case UnaryOp.SIN: return "sin"
+            case UnaryOp.TAN: return "tan"
+            case UnaryOp.ASIN: return "asin"
+            case UnaryOp.ATAN: return "atan"
+            case UnaryOp.SQRT: return "sqrt"
+            case UnaryOp.LOG: return "log"
+
+    def latex(self) -> str:
+        match self:
+            case UnaryOp.EXP: return '\\exp'
+            case UnaryOp.SIN: return '\\sin'
+            case UnaryOp.TAN: return '\\tan'
+            case UnaryOp.ASIN: return '\\sin^{-1}'
+            case UnaryOp.ATAN: return '\\tan^{-1}'
+            case UnaryOp.SQRT: return '\\sqrt'
+            case UnaryOp.LOG: return '\\log'
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 class UnaryExpression(Expression):
@@ -198,12 +283,22 @@ class UnaryExpression(Expression):
                 return super().may_be_negative()
 
     def __str__(self):
-        return f"({self.op} {self.operand})"
+        return f"{self.op}({self.operand})"
 
     def __eq__(self, value) -> bool:
         if isinstance(value, UnaryExpression):
             return self.op == value.op and self.operand == value.operand
         return False
+
+    def __hash__(self):
+        return hash((self.op, self.operand))
+
+    def __lt__(self, other) -> bool:
+        if isinstance(other, ConstantExpression) or isinstance(other, VariableExpression):
+            return False
+        if isinstance(other, UnaryExpression):
+            return self.op < other.op
+        return True
 
 class ExpressionVisitor:
     """
@@ -244,19 +339,23 @@ class ExpressionVisitor:
 
 
 class ExpressionSampler(ExpressionVisitor):
-    def __init__(self, k: int = 1):
+    def __init__(self, k: int = 1, filter = None):
         super().__init__()
 
         self.k = k
         self.i = 0
         self.reservoir = []
+        self.filter = filter
 
     def visit_expr(self, expr: Expression):
+        if self.filter is not None and not self.filter(expr):
+            return
+
         if len(self.reservoir) < self.k:
             self.reservoir.append(expr)
         else:
-            j = np.random.randint(1, self.i + 1)
-            if j <= self.k:
+            j = np.random.randint(0, self.i)
+            if j < self.k:
                 self.reservoir[j] = expr
 
         self.i += 1
@@ -270,7 +369,7 @@ class Formula:
     def __init__(self, expr: Expression):
         self.expr = expr
 
-    def pick_random_node(self, k: int = 1) -> Expression:
+    def pick_random_node(self, k: int = 1, filter = None) -> Expression:
         """
         Pick at random k nodes from the expression tree (uniform distribution).
 
@@ -280,10 +379,10 @@ class Formula:
 
         assert(k > 0)
 
-        sampler = ExpressionSampler(k)
+        sampler = ExpressionSampler(k, filter)
         sampler.accept(self.expr)
         if k == 1:
-            return sampler.reservoir[0]
+            return sampler.reservoir[0] if len(sampler.reservoir) > 0 else None
         else:
             return sampler.reservoir
 
