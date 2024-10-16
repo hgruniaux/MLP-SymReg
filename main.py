@@ -50,14 +50,14 @@ target_y = target_formula(target_x)
 print(f"Mean = {np.mean(target_y)}, Std = {np.std(target_y)}")
 target_y += 0.1 * np.random.normal(np.mean(target_y), np.std(target_y), np.shape(target_y))
 
-plt.plot(target_x, target_y, label=f"Target function: {target_formula}", linestyle='dashed')
+plt.plot(target_x, target_y, label=f"Target function: ${target_formula.latex()}$", linestyle='dashed')
 
 candidates = run(target_x, target_y, options)
 for i, candidate in enumerate(candidates):
     y = candidate(target_x)
     if np.shape(y) != np.shape(target_x):
         y = np.array([y] * len(target_x))
-    plt.plot(target_x, y, label=f"Candidate {i}: {candidate}")
+    plt.plot(target_x, y, label=f"Candidate {i}: ${candidate.latex()}$")
 
 plt.legend()
 plt.savefig('output.png')

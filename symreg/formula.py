@@ -27,8 +27,14 @@ class Expression:
         """
         return True
 
-    def __str__(self):
+    def display(self, prec: int = 0) -> str:
         raise NotImplementedError
+
+    def latex(self, prec: int = 0) -> str:
+        return self.display(prec)
+
+    def __str__(self):
+        return self.display()
 
     def __eq__(self, value) -> bool:
         raise NotImplementedError
@@ -62,7 +68,7 @@ class ConstantExpression(Expression):
     def may_be_negative(self):
         return self.value < 0
 
-    def __str__(self):
+    def display(self, prec: int = 0) -> str:
         return str(self.value)
 
     def __eq__(self, value) -> bool:
@@ -93,7 +99,7 @@ class VariableExpression(Expression):
             raise RuntimeError(f"Unknown variable '{self.name}' referenced.")
         return ctx[self.name]
 
-    def __str__(self):
+    def display(self, prec: int = 0) -> str:
         return self.name
 
     def __eq__(self, value) -> bool:
@@ -135,6 +141,17 @@ class BinaryOp(Enum):
             case BinaryOp.SUB | BinaryOp.DIV: return False
             case _: raise NotImplementedError
 
+    @property
+    def precedence(self) -> int:
+        """
+        Returns the precedence of the operator (used for pretty printing).
+        """
+
+        match self:
+            case BinaryOp.ADD | BinaryOp.SUB: return 1
+            case BinaryOp.MUL | BinaryOp.DIV: return 2
+            case _: raise NotImplementedError
+
     def __str__(self):
         match self:
             case BinaryOp.ADD: return "+"
@@ -142,7 +159,7 @@ class BinaryOp(Enum):
             case BinaryOp.MUL: return "*"
             case BinaryOp.DIV: return "/"
 
-    def latex(self):
+    def latex(self, prec: int = 0):
         match self:
             case BinaryOp.ADD: return "+"
             case BinaryOp.SUB: return "-"
@@ -190,8 +207,25 @@ class BinaryExpression(Expression):
             case _:
                 return super().may_be_negative()
 
-    def __str__(self):
-        return f"({self.lhs} {self.op} {self.rhs})"
+    def display(self, prec: int = 0) -> str:
+        op_prec = self.op.precedence
+        output = f"{self.lhs.display(op_prec + 1)} {self.op} {self.rhs.display(op_prec + 1)}"
+        if prec > op_prec:
+            return f"({output})"
+        else:
+            return output
+
+    def latex(self, prec: int = 0) -> str:
+        op_prec = self.op.precedence
+        match self.op:
+            case BinaryOp.DIV:
+                output = f"\\frac{{{self.lhs.latex()}}}{{{self.rhs.latex()}}}"
+            case _:
+                output = f"{self.lhs.latex(op_prec + 1)} {self.op.latex()} {self.rhs.latex(op_prec + 1)}"
+        if prec > op_prec:
+            return f"\\left({output}\\right)"
+        else:
+            return output
 
     def __eq__(self, value) -> bool:
         if isinstance(value, BinaryExpression):
@@ -282,8 +316,15 @@ class UnaryExpression(Expression):
             case _:
                 return super().may_be_negative()
 
-    def __str__(self):
+    def display(self, prec: int = 0) -> str:
         return f"{self.op}({self.operand})"
+
+    def latex(self, prec: int = 0) -> str:
+        match self.op:
+            case UnaryOp.SQRT:
+                return f"\\sqrt{{{self.operand.latex()}}}"
+            case _:
+                return f"{self.op.latex()}\\left({self.operand.latex()}\\right)"
 
     def __eq__(self, value) -> bool:
         if isinstance(value, UnaryExpression):
@@ -386,8 +427,11 @@ class Formula:
         else:
             return sampler.reservoir
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.expr)
+
+    def latex(self) -> str:
+        return self.expr.latex()
 
     def __call__(self, *args, **kwds):
         return self.expr.__call__(*args, **kwds)
