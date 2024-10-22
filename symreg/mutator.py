@@ -196,7 +196,7 @@ class VariableMutator(BaseVisitorMutator):
     Mutator that randomly changes the name of a variable expression.
     """
 
-    def __init__(self, allowed_names: List[str], p: List[float] = None):
+    def __init__(self, allowed_names: List[int], p: List[float] = None):
         super().__init__(lambda e: isinstance(e, VariableExpression))
         self.allowed_names = allowed_names
         self.p = p
