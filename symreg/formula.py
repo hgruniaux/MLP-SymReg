@@ -118,17 +118,17 @@ class VariableExpression(Expression):
 
     def __eq__(self, value) -> bool:
         if isinstance(value, VariableExpression):
-            return self.name == value.name
+            return self.idx == value.idx
         return False
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.idx)
 
     def __lt__(self, other) -> bool:
         if isinstance(other, ConstantExpression):
             return False
         if isinstance(other, VariableExpression):
-            return self.name < other.name
+            return self.idx < other.idx
         return True
 
 
