@@ -9,7 +9,7 @@ class RandomOptions:
   prob_variable_expr = 0.8
   prob_binary_expr = 0.6
   prob_unary_expr = 0.4
-  allowed_variables = ['x']
+  allowed_variables = [0]
   allowed_binary_operators = [o for o in BinaryOp]
   prob_binary_operators = [ 0.1, 0.1, 0.7, 0.1 ]
   allowed_unary_operators = [o for o in UnaryOp]
