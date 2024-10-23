@@ -7,13 +7,13 @@ from dataclasses import dataclass
 class RandomOptions:
   prob_constant_expr = 0.2
   prob_variable_expr = 0.8
-  prob_binary_expr = 0.6
-  prob_unary_expr = 0.4
-  allowed_variables = [0]
+  prob_binary_expr = 0.3
+  prob_unary_expr = 0.7
+  allowed_variables = ['x']
   allowed_binary_operators = [o for o in BinaryOp]
   prob_binary_operators = [ 0.1, 0.1, 0.7, 0.1 ]
   allowed_unary_operators = [o for o in UnaryOp]
-  prob_unary_operators = [ 0.15, 0.2, 0.05, 0.05, 0.05, 0.4, 0.1 ]
+  prob_unary_operators = [ 0.15, 0.2, 0.1, 0.05, 0.1, 0.3, 0.1 ]
   max_depth = 4
   definition_set = None
   must_have_variable = True
