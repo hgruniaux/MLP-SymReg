@@ -4,11 +4,18 @@ from copy import deepcopy
 
 
 class DerivativeVisitor(ExpressionVisitor):
+    def __init__(self, var = None):
+        super().__init__()
+        self.var = var
+
     def visit_constant_expr(self, expr: ConstantExpression) -> Expression:
         return ConstantExpression(0)
 
     def visit_variable_expr(self, expr: VariableExpression) -> Expression:
-        return ConstantExpression(1)
+        if self.var is None or (self.var == expr):
+            return ConstantExpression(1)
+        else:
+            return ConstantExpression(0)
 
     def visit_binary_expr(self, expr: BinaryExpression) -> Expression:
         match expr.op:
@@ -130,13 +137,13 @@ class DerivativeVisitor(ExpressionVisitor):
                 raise NotImplementedError
 
 
-def derivate(expr: Expression | Formula) -> Expression:
+def derivate(expr: Expression | Formula, var = None) -> Expression:
     if isinstance(expr, Expression):
-        d = DerivativeVisitor().accept(expr)
+        d = DerivativeVisitor(var).accept(expr)
         d = simplify(d)
-        return DerivativeVisitor().accept(expr)
+        return d
     elif isinstance(expr, Formula):
-        d = DerivativeVisitor().accept(expr.expr)
+        d = DerivativeVisitor(var).accept(expr.expr)
         d = simplify(d)
         return Formula(d)
     else:
