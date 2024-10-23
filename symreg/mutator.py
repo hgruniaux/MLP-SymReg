@@ -57,6 +57,9 @@ class RandomMutator(Mutator):
     """
 
     def __init__(self, mutators: List[Mutator], p: List[float] = None):
+        assert(len(mutators) > 0)
+        assert(p is None or len(p) == len(mutators))
+
         super().__init__()
         self.mutators = mutators
         self.p = p
@@ -93,6 +96,8 @@ class SequentialMutator(Mutator):
     """
 
     def __init__(self, mutators: List[Mutator]):
+        assert(len(mutators) > 0)
+
         super().__init__()
         self.mutators = mutators
 
@@ -147,6 +152,8 @@ class BinaryOperatorMutator(BaseVisitorMutator):
         allowed_operators: List[BinaryOp] = [op for op in BinaryOp],
         p: List[float] = None,
     ):
+        assert(p is None or len(p) == len(allowed_operators))
+
         super().__init__(lambda e: isinstance(e, BinaryExpression))
         self.allowed_operators = allowed_operators
         self.p = p
@@ -183,6 +190,8 @@ class UnaryOperatorMutator(BaseVisitorMutator):
         allowed_operators: List[UnaryOp] = [op for op in UnaryOp],
         p: List[float] = None,
     ):
+        assert(p is None or len(p) == len(allowed_operators))
+
         super().__init__(lambda e: isinstance(e, UnaryExpression))
         self.allowed_operators = allowed_operators
         self.p = p
@@ -197,6 +206,8 @@ class VariableMutator(BaseVisitorMutator):
     """
 
     def __init__(self, allowed_names: List[int], p: List[float] = None):
+        assert(p is None or len(p) == len(allowed_names))
+
         super().__init__(lambda e: isinstance(e, VariableExpression))
         self.allowed_names = allowed_names
         self.p = p
@@ -257,6 +268,8 @@ class UnaryInserterMutator(BaseInserterMutator):
         allowed_operators: List[UnaryOp] = [op for op in UnaryOp],
         p: List[float] = None,
     ):
+        assert(p is None or len(p) == len(allowed_operators))
+
         super().__init__()
         self.allowed_operators = allowed_operators
         self.p = p
@@ -276,9 +289,12 @@ class BinaryInserterMutator(BaseInserterMutator):
         allowed_operators: List[BinaryOp] = [op for op in BinaryOp],
         p: List[float] = None,
     ):
+        assert(p is None or len(p) == len(allowed_operators))
+
         super().__init__()
         self.allowed_operators = allowed_operators
         self.p = p
+
 
     def insert(self, child_expr: Expression) -> Expression:
         op = np.random.choice(self.allowed_operators, self.p)
