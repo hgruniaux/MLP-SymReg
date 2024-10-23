@@ -14,19 +14,6 @@ class Expression:
     def evaluate(self, ctx):
         raise NotImplementedError
 
-
-    def may_be_null(self) -> bool:
-        """
-        Returns true if the expression may be null.
-        """
-        return True
-
-    def may_be_negative(self) -> bool:
-        """
-        Returns true if the expression may be negative.
-        """
-        return True
-
     def display(self, prec: int = 0) -> str:
         raise NotImplementedError
 
@@ -64,12 +51,6 @@ class ConstantExpression(Expression):
 
     def evaluate(self, _):
         return self.value
-
-    def may_be_null(self):
-        return self.value == 0
-
-    def may_be_negative(self):
-        return self.value < 0
 
     def display(self, prec: int = 0) -> str:
         return str(self.value)
@@ -203,24 +184,6 @@ class BinaryExpression(Expression):
         rhs = self.rhs.evaluate(ctx)
         return self.op.value(lhs, rhs)
 
-    def may_be_null(self):
-        match self.op:
-            case BinaryOp.ADD:
-                return (self.lhs.may_be_null() and self.rhs.may_be_null()) or (self.lhs.may_be_negative() or self.rhs.may_be_negative())
-            case BinaryOp.MUL:
-                return self.lhs.may_be_null() or self.rhs.may_be_null()
-            case BinaryOp.DIV:
-                return self.lhs.may_be_null()
-            case _:
-                return super().may_be_null()
-
-    def may_be_negative(self):
-        match self.op:
-            case BinaryOp.ADD, BinaryOp.MUL, BinaryOp.DIV:
-                return self.lhs.may_be_negative() or self.rhs.may_be_negative()
-            case _:
-                return super().may_be_negative()
-
     def display(self, prec: int = 0) -> str:
         op_prec = self.op.precedence
         output = f"{self.lhs.display(op_prec + 1)} {self.op} {self.rhs.display(op_prec + 1)}"
@@ -315,24 +278,6 @@ class UnaryExpression(Expression):
     def evaluate(self, ctx):
         operand = self.operand.evaluate(ctx)
         return self.op.value(operand)
-
-    def may_be_null(self):
-        match self.op:
-            case UnaryOp.EXP:
-                return False
-            case UnaryOp.SQRT:
-                return self.operand.may_be_null()
-            case _:
-                return super().may_be_null()
-
-    def may_be_negative(self):
-        match self.op:
-            case UnaryOp.EXP:
-                return False
-            case UnaryOp.SQRT:
-                return False
-            case _:
-                return super().may_be_negative()
 
     def display(self, prec: int = 0) -> str:
         return f"{self.op}({self.operand})"
