@@ -3,6 +3,7 @@ The mathematical expression simplifier.
 """
 
 from symreg.formula import *
+import numpy as np
 
 
 def _simplify_add(expr: BinaryExpression) -> Expression:
@@ -73,6 +74,14 @@ def _simplify_div(expr: BinaryExpression) -> Expression:
 
 
 class Simplifier(ExpressionVisitor):
+    """
+    A visitor class that simplifies mathematical expressions by evaluating constant expressions
+    and applying mathematical identities and algebraic properties.
+
+    Attributes:
+        evaluate (bool): A flag indicating whether to evaluate constant expressions.
+    """
+
     def __init__(self, evaluate: bool = True):
         super().__init__()
         self.evaluate = evaluate
@@ -171,11 +180,45 @@ class Simplifier(ExpressionVisitor):
         return expr
 
 
+class ConstantSimplifier(ExpressionVisitor):
+    """
+    A visitor class that simplifies constant expressions by rounding them to the nearest integer
+    if they are within a specified epsilon range.
+
+    Attributes:
+        eps (float): The epsilon value used to determine if a constant expression should be rounded.
+                     Default is 0.1.
+    """
+
+    def __init__(self, eps: float = 1e-1):
+        super().__init__()
+        self.eps = eps
+
+    def _simplify(self, value):
+        if np.abs(np.floor(value) - value) <= self.eps:
+            return np.floor(value)
+        elif np.abs(np.ceil(value) - value) <= self.eps:
+            return np.ceil(value)
+        return value
+
+    def visit_constant_expr(self, expr: ConstantExpression):
+        expr.value = self._simplify(expr.value)
+
+
 def simplify(e: Expression) -> Expression | Formula:
     simplifier = Simplifier()
     if isinstance(e, Expression):
         return simplifier.accept(e)
     elif isinstance(e, Formula):
         return Formula(simplifier.accept(e.expr))
+    else:
+        raise TypeError
+
+def simplify_constants(e: Expression, eps: float = 0.1):
+    simplifier = ConstantSimplifier(eps)
+    if isinstance(e, Expression):
+        simplifier.accept(e)
+    elif isinstance(e, Formula):
+        simplifier.accept(e.expr)
     else:
         raise TypeError
