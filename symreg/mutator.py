@@ -43,7 +43,11 @@ class SimplifyMutator(Mutator):
     """
 
     def mutate(self, formula: Formula) -> bool:
-        formula.expr = simplify(formula.expr)
+        try:
+            formula.expr = simplify(formula.expr)
+        except ZeroDivisionError:
+            # Failed to simplify the formula
+            return False
         return True
 
 
