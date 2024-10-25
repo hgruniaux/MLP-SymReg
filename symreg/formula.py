@@ -28,10 +28,6 @@ class Expression:
     def latex(self, prec: int = 0) -> str:
         return self.display(prec)
 
-    @property
-    def complexity(self) -> float:
-        return 0
-
     def __str__(self):
         return self.display()
 
@@ -103,10 +99,6 @@ class ConstantExpression(Expression):
     def display(self, prec: int = 0) -> str:
         return str(self.value)
 
-    @property
-    def complexity(self) -> float:
-        return 0
-
     def __eq__(self, value) -> bool:
         if isinstance(value, ConstantExpression):
             return self.value == value.value
@@ -140,10 +132,6 @@ class VariableExpression(Expression):
 
     def latex(self, prec=0):
         return f"x_{{{self.idx}}}"
-
-    @property
-    def complexity(self) -> float:
-        return 1
 
     def __eq__(self, value) -> bool:
         if isinstance(value, VariableExpression):
@@ -268,10 +256,6 @@ class BinaryExpression(Expression):
         else:
             return output
 
-    @property
-    def complexity(self) -> float:
-        return 1 + self.lhs.complexity + self.rhs.complexity
-
     def __eq__(self, value) -> bool:
         if isinstance(value, BinaryExpression):
             return (
@@ -373,10 +357,6 @@ class UnaryExpression(Expression):
                 return f"\\sqrt{{{self.operand.latex()}}}"
             case _:
                 return f"{self.op.latex()}\\left({self.operand.latex()}\\right)"
-
-    @property
-    def complexity(self) -> float:
-        return 1 + self.operand.complexity
 
     def __eq__(self, value) -> bool:
         if isinstance(value, UnaryExpression):
@@ -490,7 +470,3 @@ class Formula:
 
     def __call__(self, *args, **kwds):
         return self.expr.__call__(*args, **kwds)
-
-    @property
-    def complexity(self) -> float:
-        return self.expr.complexity
