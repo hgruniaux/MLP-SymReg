@@ -3,6 +3,7 @@ from symreg.formula import *
 from symreg.crossover import *
 from symreg.mutator import *
 from symreg.generator import *
+from symreg.complexity import *
 import random
 from copy import deepcopy
 
@@ -31,6 +32,9 @@ class Options:
     iterations: int = 10
     """Count of iterations (generations) to simulate."""
 
+    lambda_regularization: float = 0.1
+    """Regularization parameter for the fitness function (coefficient of complexity impact on the loss)."""
+
     verbose: bool = True
     """Show the best candidate at every show_every step."""
 
@@ -53,11 +57,10 @@ class Options:
     mutator: Mutator = None
 
 
-def fitness(formula: Formula, x, y) -> float:
-    """Computes the mean squared error (MSE)."""
+def fitness(formula: Formula, x, y, lambda_coef: float) -> float:
     predicted_y = formula(x)
     predicted_y = np.nan_to_num(predicted_y, nan=np.inf)
-    return np.mean((y - predicted_y) ** 2)
+    return np.mean((y - predicted_y) ** 2) / np.mean(y ** 2) * (1 + lambda_coef * np.log(1 + depth(formula)))
 
 
 def run(x, y, options: Options):
@@ -77,7 +80,7 @@ def run(x, y, options: Options):
             # Remove duplicates in the generation
             generation = list(set(generation))
 
-            fitness_values = [fitness(f, x, y) for f in generation]
+            fitness_values = [fitness(f, x, y, options.lambda_regularization) for f in generation]
             best_candidates_indices = np.argpartition(fitness_values, [ 0, options.k_best ])[:options.k_best]
             best_candidates: List[Formula] = [ generation[i] for i in best_candidates_indices ]
 
@@ -113,7 +116,7 @@ def run(x, y, options: Options):
 
     # Returns the k best candidates
     generation = list(set(generation)) # remove duplicates
-    fitness_values = [fitness(f, x, y) for f in generation]
+    fitness_values = [fitness(f, x, y, options.lambda_regularization) for f in generation]
     best_candidates_indices = np.argpartition(fitness_values, [ 0, 1, 2 ])[:3]
     best_candidates = [ generation[i] for i in best_candidates_indices ]
     return best_candidates
