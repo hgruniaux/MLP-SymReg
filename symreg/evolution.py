@@ -56,6 +56,9 @@ class Options:
 
     mutator: Mutator = None
 
+    updater = None
+    """Updater function to be called at each generation with the best candidates."""
+
 
 def fitness(formula: Formula, x, y, lambda_coef: float) -> float:
     predicted_y = formula(x)
@@ -83,6 +86,9 @@ def run(x, y, options: Options):
             fitness_values = [fitness(f, x, y, options.lambda_regularization) for f in generation]
             best_candidates_indices = np.argpartition(fitness_values, [ 0, options.k_best ])[:options.k_best]
             best_candidates: List[Formula] = [ generation[i] for i in best_candidates_indices ]
+
+            if options.updater is not None:
+                options.updater(best_candidates)
 
             if i % options.show_every == 0:
                 print(f"Iteration {i+1}: Loss: {np.min(fitness_values)}")
@@ -117,6 +123,8 @@ def run(x, y, options: Options):
     # Returns the k best candidates
     generation = list(set(generation)) # remove duplicates
     fitness_values = [fitness(f, x, y, options.lambda_regularization) for f in generation]
-    best_candidates_indices = np.argpartition(fitness_values, [ 0, 1, 2 ])[:3]
+    best_candidates_indices = np.argpartition(fitness_values, list(range(options.k_best)))[:options.k_best]
     best_candidates = [ generation[i] for i in best_candidates_indices ]
+    if options.updater is not None:
+        options.updater(best_candidates)
     return best_candidates
