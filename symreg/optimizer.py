@@ -143,7 +143,7 @@ class GDOptimizer:
 
         # Derivate f wrt each constant.
         self.f_prime = [derivate(self.f, const) for const in self.constants]
-        if verbose or True:
+        if verbose:
             for i, f_prime in enumerate(self.f_prime):
                 print(f"Derivative of f wrt constant {self.constants[i]}: {f_prime}")
 

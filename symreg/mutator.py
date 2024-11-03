@@ -17,12 +17,14 @@ Implemented mutators:
   - UnaryInserterMutator: inserts an unary operator
   - BinaryRemoverMutator: removes a binary operator
   - UnaryRemoverMutator: removes an unary operator
+  - ConstantOptimizerMutator: tries to optimize the constants in the expression tree
 """
 
 import numpy as np
 from typing import List
 from symreg.formula import *
 from symreg.simplify import simplify
+from symreg.optimizer import GDOptimizer
 
 
 class Mutator:
@@ -377,3 +379,23 @@ class BinaryRemoverMutator(BaseRemoverMutator):
 
     def filter(self, expr: Expression) -> bool:
         return isinstance(expr, BinaryExpression)
+
+
+class ConstantOptimizerMutator(Mutator):
+    """
+    Mutator that tries to optimize the constants in the expression tree.
+    """
+
+    def __init__(self, X, Y, learning_rate: float = 0.1, max_iters: int = 1000, tolerance: float = 1e-6, clip_value: float = 1.0):
+        super().__init__()
+        self.learning_rate = learning_rate
+        self.max_iters = max_iters
+        self.clip_value = clip_value
+        self.tolerance = tolerance
+        self.X = X
+        self.Y = Y
+
+    def mutate(self, formula: Formula) -> bool:
+        optimizer = GDOptimizer(f=formula, learning_rate=self.learning_rate, max_iters=self.max_iters, tolerance=self.tolerance, clip_value=self.clip_value)
+        optimizer.optimize(self.X, self.Y)
+        return True
