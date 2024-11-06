@@ -78,6 +78,8 @@ class Expression:
             return self
         if isinstance(other, ConstantExpression) and other.value == 2:
             return BinaryExpression(BinaryOp.MUL, self, self)
+        if isinstance(other, ConstantExpression) and other.value == 0.5:
+            return UnaryExpression(UnaryOp.SQRT, self)
         return UnaryExpression(
             UnaryOp.EXP,
             BinaryExpression(BinaryOp.MUL, other, UnaryExpression(UnaryOp.LOG, self)),
@@ -470,3 +472,30 @@ class Formula:
 
     def __call__(self, *args, **kwds):
         return self.expr.__call__(*args, **kwds)
+
+def exp(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.EXP, x)
+
+def sin(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.SIN, x)
+
+def cos(x: Expression) -> Expression:
+    return sin(x + (np.pi / 2))
+
+def tan(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.TAN, x)
+
+def asin(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.ASIN, x)
+
+def acos(x: Expression) -> Expression:
+    return (np.pi / 2) - asin(x)
+
+def atan(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.ATAN, x)
+
+def sqrt(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.SQRT, x)
+
+def log(x: Expression) -> Expression:
+    return UnaryExpression(UnaryOp.LOG, x)
