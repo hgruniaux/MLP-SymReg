@@ -31,7 +31,7 @@ def _normalize_probas(x):
     return x / np.sum(x)
 
 
-def _random_constant_expr() -> ConstantExpression:
+def _random_constant_expr(options: RandomOptions) -> ConstantExpression:
     return ConstantExpression((npr.rand() * 10) - 5)
 
 
@@ -49,14 +49,14 @@ def _random_leaf_expr(options: RandomOptions) -> Expression:
         [True, False],
         p=_normalize_probas([options.prob_constant_expr, options.prob_variable_expr]),
     ):
-        return _random_constant_expr()
+        return _random_constant_expr(options)
     else:
         return _random_variable_expr(options)
 
 
 def _random_affine_func(x: Expression, options: RandomOptions) -> Expression:
-    a = _random_constant_expr()
-    b = _random_constant_expr()
+    a = _random_constant_expr(options)
+    b = _random_constant_expr(options)
     return BinaryExpression(BinaryOp.ADD, BinaryExpression(BinaryOp.MUL, a, x), b)
 
 
