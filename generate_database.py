@@ -1,7 +1,6 @@
 from symreg.random import *
 from concurrent.futures import ProcessPoolExecutor
 import tqdm
-import lzma
 import pickle
 import time
 import argparse
@@ -14,7 +13,7 @@ def parse_args():
         description="Generate a dataset of symbolic regression formulas.",
         allow_abbrev=False,
     )
-    parser.add_argument("-o", "--output", type=str, default="formulas.pkl.xz", help="output file")
+    parser.add_argument("-o", "--output", type=str, default="formulas.pkl.gz", help="output file")
 
     generation_group = parser.add_argument_group("Generation options")
     generation_group.add_argument(
@@ -88,7 +87,14 @@ def save_formulas(output_filename: str, formulas: list, bucket_size: int):
     start = time.time()
 
     if output_filename.endswith(".xz"):
-        open_func = lzma.open
+        from lzma import open as lzma_open
+        open_func = lzma_open
+    elif output_filename.endswith(".gz"):
+        from gzip import open as gzip_open
+        open_func = gzip_open
+    elif output_filename.endswith(".bz2"):
+        from bz2 import open as bz2_open
+        open_func = bz2_open
     else:
         open_func = open
 

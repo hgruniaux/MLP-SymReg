@@ -1,6 +1,6 @@
 import pickle
 from symreg.formula import *
-from lzma import open as lzma_open
+from lzma import lzma_open
 from typing import List
 
 
@@ -24,12 +24,17 @@ def load(filename: str, max_count: int | None = None) -> List[Formula]:
 
     formulas = []
 
-    if filename.endswith(".pkl"):
-        open_func = open
-    elif filename.endswith(".pkl.xz"): # compressed variant
+    if filename.endswith(".xz"):
+        from lzma import open as lzma_open
         open_func = lzma_open
+    elif filename.endswith(".gz"):
+        from gzip import open as gzip_open
+        open_func = gzip_open
+    elif filename.endswith(".bz2"):
+        from bz2 import open as bz2_open
+        open_func = bz2_open
     else:
-        raise ValueError("File must have extension '.pkl' or '.pkl.xz'")
+        open_func = open
 
     with open_func(filename, "rb") as f:
         metadata = pickle.load(f)
