@@ -1,6 +1,5 @@
 import pickle
 from symreg.formula import *
-from lzma import lzma_open
 from typing import List
 
 
