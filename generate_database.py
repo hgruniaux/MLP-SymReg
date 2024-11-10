@@ -13,7 +13,9 @@ def parse_args():
         description="Generate a dataset of symbolic regression formulas.",
         allow_abbrev=False,
     )
-    parser.add_argument("-o", "--output", type=str, default="formulas.pkl.gz", help="output file")
+    parser.add_argument(
+        "-o", "--output", type=str, default="formulas.pkl.gz", help="output file"
+    )
 
     generation_group = parser.add_argument_group("Generation options")
     generation_group.add_argument(
@@ -88,27 +90,20 @@ def save_formulas(output_filename: str, formulas: list, bucket_size: int):
 
     if output_filename.endswith(".xz"):
         from lzma import open as lzma_open
+
         open_func = lzma_open
     elif output_filename.endswith(".gz"):
         from gzip import open as gzip_open
+
         open_func = gzip_open
     elif output_filename.endswith(".bz2"):
         from bz2 import open as bz2_open
+
         open_func = bz2_open
     else:
         open_func = open
 
     with open_func(output_filename, "wb") as f:
-        # Dump general metadata for the dataset
-        pickle.dump(
-            {
-                "bucket_size": bucket_size,
-                "count": len(formulas),
-            },
-            f,
-            pickle.HIGHEST_PROTOCOL,
-        )
-
         # Dumps formulas in chunks (so we don't have to load the whole dataset at once)
         for chunk in chunks(formulas, bucket_size):
             pickle.dump(chunk, f, pickle.HIGHEST_PROTOCOL)
@@ -125,7 +120,7 @@ def main():
         np.random.seed(args.seed)
 
     options.max_depth = args.max_depth
-    options.allowed_variables = [ k for k in range(args.max_arity) ]
+    options.allowed_variables = [k for k in range(args.max_arity)]
 
     # Generate formulas
     formulas = generate_formulas(args.jobs, args.count, args.bucket)
