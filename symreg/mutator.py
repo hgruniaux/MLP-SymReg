@@ -73,7 +73,7 @@ class RandomMutator(Mutator):
     def mutate(self, formula: Formula) -> bool:
         MAX_TRY = 10
         for _ in range(MAX_TRY):
-            mutator = np.random.choice(self.mutators, self.p)
+            mutator = np.random.choice(self.mutators, p=self.p)
             if mutator.mutate(formula):
                 return True
         return False
@@ -386,7 +386,7 @@ class ConstantOptimizerMutator(Mutator):
     Mutator that tries to optimize the constants in the expression tree.
     """
 
-    def __init__(self, X, Y, learning_rate: float = 0.1, max_iters: int = 1000, tolerance: float = 1e-6, clip_value: float = 1.0):
+    def __init__(self, X, Y, learning_rate: float = 0.1, max_iters: int = 10, tolerance: float = 1e-6, clip_value: float = 1.0):
         super().__init__()
         self.learning_rate = learning_rate
         self.max_iters = max_iters
