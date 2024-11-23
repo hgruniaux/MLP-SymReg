@@ -278,6 +278,15 @@ class BinaryExpression(Expression):
         if isinstance(other, BinaryExpression):
             return self.op < other.op
         return True
+    
+
+class ExtendedSqrt:
+    def __call__(self, x):
+        return np.sqrt(np.abs(x))*np.sign(x)
+
+class ExtendedLog:
+    def __call__(self, x):
+        return np.log(np.abs(x))*np.sign(x)
 
 
 class UnaryOp(Enum):
@@ -292,8 +301,8 @@ class UnaryOp(Enum):
     TAN = np.tan
     ASIN = np.arcsin
     ATAN = np.arctan
-    SQRT = np.sqrt
-    LOG = np.log
+    SQRT = ExtendedSqrt()
+    LOG = ExtendedLog()
 
     def __str__(self):
         match self:
