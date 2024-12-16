@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from symreg.formula import *
-from symreg.crossover import *
+#from symreg.crossover import *
 from symreg.mutator import *
 from symreg.generator import *
 from symreg.complexity import *
@@ -48,7 +48,7 @@ class Options:
     """Probability to generate a formula in the new generation using cross-over
     (picking random parts from two formula of the previous generation)."""
 
-    crossover: Crossover = None
+    crossover = None
 
     mutation_rate: float = 0.95
     """Probability to generate a formula in the new generation using mutation

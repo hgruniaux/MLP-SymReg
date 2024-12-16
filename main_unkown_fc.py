@@ -83,7 +83,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-target_x = np.linspace(-5, 5, 100)
+target_x = np.linspace(0, 1, 100)
 random_options = RandomOptions()
 random_options.definition_set = target_x
 random_options.max_depth = args.maxdepth
@@ -91,16 +91,40 @@ random_options.max_depth = args.maxdepth
 
 
 #target_formula = random_formula(random_options)
-target_formula = UnaryExpression(UnaryOp.SIN, VariableExpression(0) * 0.7)
-target_formula = UnaryExpression(UnaryOp.EXP, (-1)*VariableExpression(0)*VariableExpression(0))
+#target_formula = UnaryExpression(UnaryOp.SIN, VariableExpression() * 4.3)
 # target_formula = VariableExpression() * 4.3
 x = VariableExpression(0)
 #target_formula = UnaryExpression(UnaryOp.SIN, UnaryExpression(UnaryOp.SQRT, x*4)) + 1.2
 
 
-print(f"Target: {target_formula}")
-print(f"Tokens: {tokenize(target_formula)}")
-target_y = target_formula(target_x)
+#print(f"Target: {target_formula}")
+#print(f"Tokens: {tokenize(target_formula)}")
+#target_y = target_formula(target_x)
+target_y = np.array([-1.36936457e-07, -1.39334916e-07, -1.41733374e-07, -1.44131833e-07,
+       -1.46530291e-07, -1.48928750e-07, -1.51327209e-07, -1.53725667e-07,
+       -1.56124126e-07, -1.58522584e-07, -1.60921043e-07, -1.63319502e-07,
+       -1.65717960e-07, -1.68116419e-07, -1.70514878e-07, -1.72913336e-07,
+       -1.75311795e-07, -1.77710253e-07, -1.80108712e-07, -1.82507171e-07,
+       -1.84905629e-07, -1.87304088e-07, -1.89702547e-07, -1.92101005e-07,
+       -1.94499464e-07,  5.03073733e-05,  1.21386139e-03,  3.78767317e-03,
+        7.62063308e-03,  1.25825089e-02,  1.85603763e-02,  2.54559479e-02,
+        3.31831607e-02,  4.16664289e-02,  5.08390100e-02,  6.06418324e-02,
+        7.10224764e-02,  8.19339388e-02,  9.33343658e-02,  1.05186166e-01,
+        1.17455538e-01,  1.30111812e-01,  1.43127406e-01,  1.56477232e-01,
+        1.70138504e-01,  1.84090631e-01,  1.98314345e-01,  2.12792516e-01,
+        2.27509171e-01,  2.42449624e-01,  2.57600713e-01,  2.72949732e-01,
+        2.88485482e-01,  3.04197328e-01,  3.20075384e-01,  3.36110760e-01,
+        3.52294950e-01,  3.68620053e-01,  3.85078904e-01,  4.01664617e-01,
+        4.18370820e-01,  4.35191741e-01,  4.52121624e-01,  4.69155484e-01,
+        4.86288302e-01,  5.03515514e-01,  5.20832973e-01,  5.38236481e-01,
+        5.55722280e-01,  5.73286840e-01,  5.90926521e-01,  6.08638763e-01,
+        6.26420068e-01,  6.44267630e-01,  6.62178825e-01,  6.80151108e-01,
+        6.98182060e-01,  7.16269323e-01,  7.34411009e-01,  7.52604654e-01,
+        7.70848671e-01,  7.89140970e-01,  8.07479795e-01,  8.25863601e-01,
+        8.44290666e-01,  8.62759294e-01,  8.81268635e-01,  8.99816684e-01,
+        9.18402294e-01,  9.37024290e-01,  9.55681295e-01,  9.74372140e-01,
+        9.93096265e-01,  1.01185160e+00,  1.03063836e+00,  1.04945448e+00,
+        1.06829965e+00,  1.08717274e+00,  1.10607275e+00,  1.12499938e+00])
 print(f"Mean = {np.mean(target_y)}, Std = {np.std(target_y)}")
 if args.noise:
     target_y += 0.1 * np.random.normal(
@@ -125,12 +149,11 @@ def predict(target_x, target_y):
     preds = model(Y_norm)
     return preds
 
-proba_unary = F.softmax(predict(target_x, target_formula(target_x)))
-print("ADD/SUB | MUL/DIV | EXP | SIN | TAN | ASIN | ATAN | SQRT | LOG")
-print(f"Unary probability from CNN : {proba_unary}")
+proba_unary = F.softmax(predict(target_x, target_y))
+print(f"Unary probability from CNN : {proba_unary}")  
 
 print(proba_unary.flatten().shape)
-#random_options.prob_unary_operators = proba_unary.flatten().detach().numpy()
+random_options.prob_unary_operators = proba_unary.flatten().detach().numpy()
 
 generator = RandomGenerator(random_options)
 mutator = SequentialMutator(
@@ -181,7 +204,7 @@ lines = [
     ax.plot(target_x, np.zeros_like(target_x))[0] for i in range(options.k_best)
  ]
 
-labels = [f"Target function: ${target_formula.latex()}$"] + [f"Candidate {i}" for i in range(options.k_best)]
+labels = [f"Target function: $?$"] + [f"Candidate {i}" for i in range(options.k_best)]
 
 ax.legend(labels=labels)
 
