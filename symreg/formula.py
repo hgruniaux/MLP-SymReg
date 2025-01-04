@@ -282,11 +282,11 @@ class BinaryExpression(Expression):
 
 class ExtendedSqrt:
     def __call__(self, x):
-        return np.sqrt(np.abs(x))*np.sign(x)
+        return np.sqrt(0.5*(np.abs(x)+x))
 
 class ExtendedLog:
     def __call__(self, x):
-        return np.log(np.abs(x))*np.sign(x)
+        return np.sqrt(0.5*(np.abs(x)+x))
 
 
 class UnaryOp(Enum):
